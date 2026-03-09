@@ -16,6 +16,7 @@ body {
 }
 
 header {
+  position: relative;
   text-align: center;
   padding: 20px 0;
   margin-bottom: 30px;
@@ -26,6 +27,54 @@ header {
 
 header h1 {
   margin-bottom: 10px;
+}
+
+.auth-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.user-menu-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background-color: rgba(255, 255, 255, 0.15);
+  font-size: 20px;
+  padding: 0;
+}
+
+.user-menu-button:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+.auth-menu {
+  position: absolute;
+  right: 0;
+  margin-top: 8px;
+  width: 220px;
+  background-color: white;
+  color: #333;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  text-align: left;
+  z-index: 10;
+}
+
+.auth-menu p {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.auth-menu button {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.auth-menu button:last-child {
+  margin-bottom: 0;
 }
 
 main {
@@ -55,6 +104,16 @@ section h3 {
   padding-bottom: 10px;
   border-bottom: 1px solid #ddd;
   color: #1a237e;
+}
+
+.auth-hint {
+  margin-bottom: 14px;
+  background-color: #eef2ff;
+  color: #1a237e;
+  border: 1px solid #c7d2fe;
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 14px;
 }
 
 .activity-card {
@@ -190,6 +249,68 @@ button:hover {
 
 .hidden {
   display: none;
+}
+
+.secondary-button {
+  background-color: #eceff1;
+  color: #333;
+}
+
+.secondary-button:hover {
+  background-color: #d8dde1;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  width: min(92vw, 420px);
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+input:disabled,
+select:disabled,
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .auth-controls {
+    top: 8px;
+    right: 8px;
+  }
+
+  .auth-menu {
+    width: 200px;
+  }
+
+  header {
+    padding-top: 56px;
+  }
 }
 
 footer {
