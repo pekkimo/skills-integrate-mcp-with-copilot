@@ -8,7 +8,11 @@ for extracurricular activities at Mergington High School.
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
+from fastapi import Request, Response
 import os
+import json
+import secrets
 from pathlib import Path
 
 app = FastAPI(title="Mergington High School API",
@@ -18,6 +22,40 @@ app = FastAPI(title="Mergington High School API",
 current_dir = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
           "static")), name="static")
+
+
+def load_teacher_credentials() -> dict:
+    """Load teacher credentials from JSON file in this directory."""
+    teachers_file = current_dir / "teachers.json"
+    with teachers_file.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    credentials = {}
+    for teacher in data.get("teachers", []):
+        username = teacher.get("username")
+        password = teacher.get("password")
+        if username and password:
+            credentials[username] = password
+
+    return credentials
+
+
+teacher_credentials = load_teacher_credentials()
+teacher_sessions = {}
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+def require_teacher_session(request: Request) -> str:
+    """Return teacher username if request has a valid session cookie."""
+    token = request.cookies.get("teacher_session")
+    username = teacher_sessions.get(token)
+    if not username:
+        raise HTTPException(status_code=401, detail="Teacher login required")
+    return username
 
 # In-memory activity database
 activities = {
@@ -83,14 +121,53 @@ def root():
     return RedirectResponse(url="/static/index.html")
 
 
+@app.post("/auth/login")
+def login(payload: LoginRequest, response: Response):
+    """Authenticate teacher and set session cookie."""
+    expected_password = teacher_credentials.get(payload.username)
+    if expected_password != payload.password:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token = secrets.token_urlsafe(32)
+    teacher_sessions[token] = payload.username
+    response.set_cookie(
+        key="teacher_session",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        max_age=8 * 60 * 60,
+    )
+    return {"message": "Logged in", "username": payload.username}
+
+
+@app.post("/auth/logout")
+def logout(request: Request, response: Response):
+    """Clear teacher session cookie."""
+    token = request.cookies.get("teacher_session")
+    if token:
+        teacher_sessions.pop(token, None)
+    response.delete_cookie("teacher_session")
+    return {"message": "Logged out"}
+
+
+@app.get("/auth/status")
+def auth_status(request: Request):
+    """Return whether current user is authenticated as a teacher."""
+    token = request.cookies.get("teacher_session")
+    username = teacher_sessions.get(token) if token else None
+    return {"authenticated": bool(username), "username": username}
+
+
 @app.get("/activities")
 def get_activities():
     return activities
 
 
 @app.post("/activities/{activity_name}/signup")
-def signup_for_activity(activity_name: str, email: str):
+def signup_for_activity(activity_name: str, email: str, request: Request):
     """Sign up a student for an activity"""
+    require_teacher_session(request)
+
     # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
@@ -111,8 +188,10 @@ def signup_for_activity(activity_name: str, email: str):
 
 
 @app.delete("/activities/{activity_name}/unregister")
-def unregister_from_activity(activity_name: str, email: str):
+def unregister_from_activity(activity_name: str, email: str, request: Request):
     """Unregister a student from an activity"""
+    require_teacher_session(request)
+
     # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
